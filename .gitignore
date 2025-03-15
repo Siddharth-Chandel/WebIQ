@@ -1,0 +1,8 @@
+venv
+cache
+model
+__pycache__
+venv
+t.py
+temp.py
+.env

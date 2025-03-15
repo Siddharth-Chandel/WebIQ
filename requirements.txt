@@ -1,0 +1,13 @@
+crawl4ai
+psutil
+streamlit
+requests
+beautifulsoup4
+langchain
+langchain-community
+langchain-huggingface
+transformers
+accelerate
+faiss-cpu
+ctransformers
+bitsandbytes
