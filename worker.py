@@ -45,8 +45,7 @@ async def crawl_parallel(urls: List[str], file_name: str, max_concurrent: int):
     os.mkdir("cache") if not os.path.exists("cache") else None
 
     if not os.path.exists(f"cache/{file_name[:-4]}/{file_name}"):
-        os.mkdir(
-            f"cache/{file_name[:-4]}") if not os.path.exists(f"cache/{file_name[:-4]}") else None
+        os.mkdir("/".join(file_name.split("/")[:-1])) if not os.path.exists("/".join(file_name.split("/")[:-1])) else None
     else:
         return
 
@@ -123,31 +122,34 @@ async def crawl_parallel(urls: List[str], file_name: str, max_concurrent: int):
         log_memory(prefix="Final: ")
         print(f"\nPeak memory usage (MB): {peak_memory // (1024 * 1024)}")
         text = await clean_txt(text)
-        with open(f"cache/{file_name[:-4]}/{file_name}", "w+", encoding="utf-8") as file:
+        with open(file_name, "w+", encoding="utf-8") as file:
             file.write(text)
-        # with open(f"cache/{file_name[:-4]}/document.txt","w+", encoding="utf-8") as file:
-        #     file.write(text)
         del text
 
 
-async def scrape_website(page_url: str, file_name: str):
+async def scrape_website(page_url: str|list, file_name: str):
     """Get URLs from a webpage."""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(page_url) as response:
-            if response.status != 200:
-                print(
-                    f"Failed to retrieve the page. Status code: {response.status}")
-                return []
-            html = await response.text()
+    if type(page_url) == str:
+        file_path=f"cache/{file_name[:-4]}/{file_name}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(page_url) as response:
+                if response.status != 200:
+                    print(
+                        f"Failed to retrieve the page. Status code: {response.status}")
+                    return []
+                html = await response.text()
 
-    # Parse the HTML to extract all URLs
-    soup = BeautifulSoup(html, "html.parser")
-    raw_urls = [a['href'] for a in soup.find_all('a', href=True)]
+        # Parse the HTML to extract all URLs
+        soup = BeautifulSoup(html, "html.parser")
+        raw_urls = [a['href'] for a in soup.find_all('a', href=True)]
 
-    # Convert relative URLs to absolute URLs
-    absolute_urls = [urljoin(page_url, u) for u in raw_urls]
+        # Convert relative URLs to absolute URLs
+        absolute_urls = [urljoin(page_url, u) for u in raw_urls]
 
-    await crawl_parallel(absolute_urls, file_name=file_name, max_concurrent=batch)
+        await crawl_parallel(absolute_urls, file_name=file_path, max_concurrent=batch)
+    else:
+        file_path=f"cache/group_{file_name[:-4]}/{file_name}"
+        await crawl_parallel(page_url, file_name=file_path, max_concurrent=batch)
 
-    with open(f"cache/{file_name[:-4]}/{file_name}", "r", encoding="utf-8") as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         return file.read()

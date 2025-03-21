@@ -9,7 +9,7 @@ st.title("📖 Web Reader Chatbot")
 
 st.sidebar.header("Settings")
 url = st.sidebar.text_input("Enter Website URL", "https://playwright.dev")
-query = st.sidebar.text_input("Ask a Question", "Describe the document in 100 words")
+query = st.sidebar.text_input("Ask a Question", "Describe playwright and its feature briefly")
 
 st.markdown("---")
 st.write("### 🤖 Chatbot Response")
@@ -19,7 +19,7 @@ if col1.button("Run Chatbot"):
     try:
         with st.spinner('Processing...'):
             response = chatbot(url, query)
-        st.write(f"> {response}")
+        st.write(f"> {response['result']}")
     except Exception as e:
         st.error(f"Error: {e}")
 else:
