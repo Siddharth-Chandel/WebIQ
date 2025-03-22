@@ -13,6 +13,7 @@ from transformers import pipeline
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.llms import CTransformers
 from langchain.prompts import PromptTemplate
+from rich import print as rprint
 
 load_dotenv()
 
@@ -27,29 +28,25 @@ logging.basicConfig(level=logging.INFO,
 
 async def prepare_document(url: str | list):
     if type(url) == str:
-        file_name = f"{url[8:].replace('.', '-').split('/')[0]}.txt"
-        cache_path = f"cache/{file_name[:-4]}"
+        folder = f"{url[8:].replace('.', '-').split('/')[0]}"
+        cache_path = f"cache/{folder}/pages"
         os.makedirs(cache_path, exist_ok=True)
 
-        file_path = os.path.join(cache_path, file_name)
-
-        if not os.path.exists(file_path):
+        if not os.path.exists(f"{cache_path}/page_1.txt"):
             logging.info("Document not found. Scraping website...")
-            await scrape_website(url, file_name)
+            await scrape_website(url, cache_path)
             logging.info("Scraping completed.")
     else:
-        file_name = f"{url[0][8:].replace('.', '-').split('/')[0]}.txt"
-        cache_path = f"cache/group_{file_name[:-4]}"
+        folder = f"{url[0][8:].replace('.', '-').split('/')[0]}"
+        cache_path = f"cache/list_{folder}/pages"
         os.makedirs(cache_path, exist_ok=True)
 
-        file_path = os.path.join(cache_path, file_name)
-
-        if not os.path.exists(file_path):
+        if not os.path.exists(f"{cache_path}/page_1.txt"):
             logging.info("Document not found. Scraping website...")
-            await scrape_website(url, file_name)
+            await scrape_website(url, cache_path)
             logging.info("Scraping completed.")
 
-    return file_path
+    return cache_path
 
 
 def process_documents(file_path: str, chunk_size: int = 500, chunk_overlap: int = 100, embedding_model_name: str = "", api_key: str = ""):
@@ -66,8 +63,14 @@ def process_documents(file_path: str, chunk_size: int = 500, chunk_overlap: int 
             return
 
         # Load document
-        doc_loader = TextLoader(file_path, encoding="utf-8")
-        documents = doc_loader.load()
+        documents = []
+        files = os.listdir(f"{cache_path}/pages")
+        for file in files:
+            doc_loader = TextLoader(
+                f"{cache_path}/pages/{file}", encoding="utf-8")
+            document = doc_loader.load()
+            documents.extend(document)
+        logging.info(f"Total number of pages: {len(documents)}")
 
         # Better chunking logic
         text_splitter = RecursiveCharacterTextSplitter(
@@ -113,7 +116,8 @@ def load_retriever(file_path: str, embedding_model_name: str = "", api_key: str 
             logging.warning(
                 "FAISS index not found! Checking for retriever cache...")
             logging.warning("No retriever cache found. Processing document...")
-            process_documents(file_path, embedding_model_name=embedding_model_name, api_key=api_key)
+            process_documents(
+                file_path, embedding_model_name=embedding_model_name, api_key=api_key)
 
         # Load FAISS index safely
         vector_db = FAISS.load_local(
@@ -178,4 +182,11 @@ def chatbot(url: str | list, query: str, llm: str = "", embedding_model: str = "
 if __name__ == "__main__":
     url = "https://playwright.dev"
     query = "Describe playwright"
-    print(chatbot(url, query)['result'])
+    response = chatbot(url, query)
+    rprint(f"\n[red]{'=='*20}* Answer *{'=='*20}[/red]\n")
+    rprint(f"[cyan]{response['result']}[/cyan]")
+    rprint(f"\n[red]{'=='*17}* Source Documents *{'=='*17}[/red]\n")
+    for i, source in enumerate(response['source_documents']):
+        rprint(f"[red]Source {i+1}[/red]:")
+        rprint(f"[yellow]file:[/yellow] [cyan]{source.metadata['source']}[/cyan]")
+        rprint(f"[yellow]content:[/yellow]\n{source.page_content}\n")

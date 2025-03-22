@@ -11,3 +11,4 @@ accelerate
 faiss-cpu
 ctransformers
 bitsandbytes
+rich

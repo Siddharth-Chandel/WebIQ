@@ -34,7 +34,7 @@ async def clean_txt(text: str, sep: str = "\n\n"):
     return sep.join(unique_paragraphs)
 
 
-async def crawl_parallel(urls: List[str], file_name: str, max_concurrent: int):
+async def crawl_parallel(urls: List[str], file_path: str, max_concurrent: int = 32):
     text = ""
     print("\n=== Parallel Crawling with Browser Reuse + Memory Check ===")
 
@@ -42,12 +42,7 @@ async def crawl_parallel(urls: List[str], file_name: str, max_concurrent: int):
     peak_memory = 0
     process = psutil.Process(os.getpid())
 
-    os.mkdir("cache") if not os.path.exists("cache") else None
-
-    if not os.path.exists(f"cache/{file_name[:-4]}/{file_name}"):
-        os.mkdir("/".join(file_name.split("/")[:-1])) if not os.path.exists("/".join(file_name.split("/")[:-1])) else None
-    else:
-        return
+    os.makedirs(file_path, exist_ok=True)
 
     def log_memory(prefix: str = ""):
         nonlocal peak_memory
@@ -122,15 +117,19 @@ async def crawl_parallel(urls: List[str], file_name: str, max_concurrent: int):
         log_memory(prefix="Final: ")
         print(f"\nPeak memory usage (MB): {peak_memory // (1024 * 1024)}")
         text = await clean_txt(text)
-        with open(file_name, "w+", encoding="utf-8") as file:
-            file.write(text)
+        total_pages = text.split(SEP)
+        for i, page in enumerate(total_pages):
+            if page == '':
+                total_pages.pop(i)
+            else:    
+                with open(f"{file_path}/page_{i+1}.txt", "w+", encoding="utf-8") as file:
+                    file.write(page)
         del text
 
 
-async def scrape_website(page_url: str|list, file_name: str):
+async def scrape_website(page_url: str | list, file_name: str):
     """Get URLs from a webpage."""
     if type(page_url) == str:
-        file_path=f"cache/{file_name[:-4]}/{file_name}"
         async with aiohttp.ClientSession() as session:
             async with session.get(page_url) as response:
                 if response.status != 200:
@@ -146,10 +145,6 @@ async def scrape_website(page_url: str|list, file_name: str):
         # Convert relative URLs to absolute URLs
         absolute_urls = [urljoin(page_url, u) for u in raw_urls]
 
-        await crawl_parallel(absolute_urls, file_name=file_path, max_concurrent=batch)
+        await crawl_parallel(absolute_urls, file_path=file_name, max_concurrent=batch)
     else:
-        file_path=f"cache/group_{file_name[:-4]}/{file_name}"
-        await crawl_parallel(page_url, file_name=file_path, max_concurrent=batch)
-
-    with open(file_path, "r", encoding="utf-8") as file:
-        return file.read()
+        await crawl_parallel(page_url, file_path=file_name, max_concurrent=batch)
