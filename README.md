@@ -1,4 +1,4 @@
-# WebScrape-QA Chatbot
+# WebIQ – Boosts your web intelligence with AI-powered insights
 
 ## Overview
 This project is a **web scraping and question-answering (QA) chatbot** that follows the **RAG (Retrieval Augmented Generation)** pipeline, retrieving relevant information from a given website and answering user queries based on the extracted data. It utilizes **FAISS for vector storage**, **LangChain for retrieval and chaining**, and **Hugging Face / OpenAI LLMs** for response generation.
