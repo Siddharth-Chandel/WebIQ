@@ -9,6 +9,9 @@ This project is a **web scraping and question-answering (QA) chatbot** that foll
 - **LLM Integration**: Supports OpenAI (GPT-4) and Hugging Face (Llama-2, Mistral, etc.).
 - **Chunking for Optimization**: Documents are split into manageable chunks for better retrieval.
 - **Asynchronous Processing**: Uses `asyncio` for efficient execution.
+- **Caching Mechanism**: Programmed in such a way that no need to process already processed webpages again and again.
+- **Batch Processing**: Curated batches to process large numbers of URLs efficiently.
+- **Logging Memory Utilisation**: Shows the memory consumption before and after each batch.
 
 ## Installation
 
