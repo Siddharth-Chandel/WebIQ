@@ -62,10 +62,13 @@ Content: Playwright is a Node.js library that automates browsers.
 ```
 
 ## Technologies Used
+- **RAG** (Providing better context)
 - **LangChain** (Retrieval-based QA system)
 - **FAISS** (Efficient similarity search)
 - **Hugging Face Transformers** (LLMs & embeddings)
 - **OpenAI GPT-4** (Optional for LLM-based response generation)
+- **Crawl4AI** (An LLM-based web-scraper)
+- **AsyncIO** (Increment the processing speed)
 - **Rich** (For colorful CLI outputs)
 
 ## Future Enhancements
