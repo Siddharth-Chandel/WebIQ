@@ -32,8 +32,8 @@ This project is a **web scraping and question-answering (QA) chatbot** that foll
 4. Set up environment variables by creating a `.env` file:
     ```sh
     HUGGINGFACEHUB_API_TOKEN=your_huggingface_token
-    MODEL=mistralai/Mistral-7B-Instruct-v0.3
-    EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+    MODEL="TheBloke/Llama-2-7B-Chat-GGML"
+    EMBEDDING_MODEL="BAAI/bge-small-en"
     OPENAI_API_KEY=your_openai_api_key  # If using OpenAI
     ```
 
