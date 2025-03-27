@@ -1,6 +1,6 @@
 import streamlit as st
 import asyncio
-from main import chatbot
+from chatbot import chatbot
 import shutil
 
 # --- STREAMLIT UI ---

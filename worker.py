@@ -44,7 +44,7 @@ async def crawl_parallel(urls: List[str] | str, file_path: str, max_concurrent: 
     retry = set()
     failed = set()
     wasStr = 0
-    n=1
+    n = 1
     if isinstance(urls, str):
         urls = [urls]
         wasStr = 1
@@ -133,7 +133,7 @@ async def crawl_parallel(urls: List[str] | str, file_path: str, max_concurrent: 
                             visited.add(url)
                             fail_count += 1
                 urls = list(not_visit)
-                n+=1
+                n += 1
         except Exception as e:
             traceback.print_exc()
             print(e)
@@ -156,7 +156,8 @@ async def crawl_parallel(urls: List[str] | str, file_path: str, max_concurrent: 
         else:
             with open(f"{file_path}/page_{i+1}.txt", "w+", encoding="utf-8") as file:
                 file.write(page)
-    del text, not_visit, visited, retry
+    print(f"Failed urls: {failed}")
+    del text, not_visit, visited, retry, failed
 
 
 async def scrape_website(page_url: str | list, file_name: str):

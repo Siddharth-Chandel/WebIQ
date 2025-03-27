@@ -26,30 +26,34 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
 
-async def prepare_document(url: str | list):
+async def prepare_document(url: str | list[str]):
     if isinstance(url, str):
         folder = f"{url[8:].replace('.', '-').split('/')[0]}"
-        cache_path = f"cache/{folder}/pages"
-        os.makedirs(cache_path, exist_ok=True)
-
-        if not os.path.exists(f"{cache_path}/page_1.txt"):
-            logging.info("Document not found. Scraping website...")
-            await scrape_website(url, cache_path)
-            logging.info("Scraping completed.")
+        cache_path = os.path.join("cache", folder, "pages")
     else:
         folder = f"{url[0][8:].replace('.', '-').split('/')[0]}"
-        cache_path = f"cache/list_{folder}/pages"
-        os.makedirs(cache_path, exist_ok=True)
+        cache_path = os.path.join("cache", f"list_{folder}", "pages")
 
-        if not os.path.exists(f"{cache_path}/page_1.txt"):
-            logging.info("Document not found. Scraping website...")
-            await scrape_website(url, cache_path)
-            logging.info("Scraping completed.")
+    os.makedirs(cache_path, exist_ok=True)
+
+    if not os.path.exists(f"{cache_path}/page_1.txt"):
+        logging.info("Document not found. Scraping website...")
+        await scrape_website(url, cache_path)
+        logging.info("Scraping completed.")
 
     return cache_path
 
 
-def process_documents(file_path: str, chunk_size: int = 500, chunk_overlap: int = 100, embedding_model_name: str = "", api_key: str = ""):
+def get_embedding_model(embedding_model_name, api_key):
+    embedding_model_name = embedding_model_name or EMBEDDING_MODEL
+    if "openai" in embedding_model_name.lower() and api_key:
+        return OpenAIEmbeddings(
+            model="text-embedding-ada-002", api_key=api_key)
+    else:
+        return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+
+
+def process_documents(file_path: str, embedding_model, chunk_size: int = 500, chunk_overlap: int = 100):
     try:
         logging.info("Loading and processing document...")
 
@@ -78,14 +82,6 @@ def process_documents(file_path: str, chunk_size: int = 500, chunk_overlap: int 
         docs = text_splitter.split_documents(documents)
         logging.info(f"Total number of chunks: {len(docs)}")
 
-        # Allow flexible embedding models
-        embedding_model_name = embedding_model_name or EMBEDDING_MODEL
-        if "openai" in embedding_model_name.lower() and api_key:
-            embedding_model = OpenAIEmbeddings(
-                model="text-embedding-ada-002", api_key=api_key)
-        else:
-            embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-
         # Build FAISS vector store
         vector_db = FAISS.from_documents(docs, embedding_model)
         vector_db.save_local(faiss_path)
@@ -101,13 +97,7 @@ def load_retriever(file_path: str, embedding_model_name: str = "", api_key: str 
         cache_path = os.path.dirname(file_path)
 
         # Select embedding model (default to Hugging Face if not specified)
-        embedding_model_name = embedding_model_name or EMBEDDING_MODEL
-        if "openai" in embedding_model_name.lower():
-            embedding_model = OpenAIEmbeddings(
-                model="text-embedding-ada-002", api_key=api_key)
-        else:
-            embedding_model = HuggingFaceEmbeddings(
-                model_name=embedding_model_name)
+        embedding_model = get_embedding_model(embedding_model_name, api_key)
 
         # Check if FAISS index exists
         faiss_path = f"{cache_path}/faiss_index_store"
@@ -117,7 +107,9 @@ def load_retriever(file_path: str, embedding_model_name: str = "", api_key: str 
                 "FAISS index not found! Checking for retriever cache...")
             logging.warning("No retriever cache found. Processing document...")
             process_documents(
-                file_path, embedding_model_name=embedding_model_name, api_key=api_key)
+                file_path,
+                embedding_model=embedding_model
+            )
 
         # Load FAISS index safely
         vector_db = FAISS.load_local(
@@ -143,12 +135,12 @@ async def async_chatbot(url: str | list, query: str, llm_model: str = "", embedd
         llm = ChatOpenAI(model_name=os.getenv(
             "MODEL", "gpt-4-turbo"), openai_api_key=api_key)
     else:
-        if "GGML" not in MODEL:
+        if not (MODEL.lower().endswith("-ggml")):
             hf_pipeline = pipeline(
                 "text-generation",
                 model=MODEL,
-                token=HUGGINGFACEHUB_API_TOKEN
-            )
+                token=HUGGINGFACEHUB_API_TOKEN,
+                device_map="auto")
 
             llm = HuggingFacePipeline(pipeline=hf_pipeline)
         else:
