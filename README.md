@@ -12,6 +12,7 @@ This project is a **web scraping and question-answering (QA) chatbot** that foll
 - **Caching Mechanism**: Programmed in such a way that no need to process already processed webpages again and again.
 - **Batch Processing**: Curated batches to process large numbers of URLs efficiently.
 - **Logging Memory Utilisation**: Shows the memory consumption before and after each batch.
+- **Support for Multiple Webpages**: Added support for multi-page scraping.
 
 ## Installation
 
@@ -72,7 +73,6 @@ Content: Playwright is a Node.js library that automates browsers.
 - **Rich** (For colorful CLI outputs)
 
 ## Future Enhancements
-- Add support for multi-page scraping.
 - Implement a web interface using Streamlit or FastAPI.
 - Improve response accuracy with RAG optimization.
 
