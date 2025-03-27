@@ -1,25 +1,25 @@
 # WebIQ – Boosts your web intelligence with AI-powered insights
 
 ## Overview
-This project is a **web scraping and question-answering (QA) chatbot** that follows the **RAG (Retrieval Augmented Generation)** pipeline, retrieving relevant information from a given website and answering user queries based on the extracted data. It utilizes **FAISS for vector storage**, **LangChain for retrieval and chaining**, and **Hugging Face / OpenAI LLMs** for response generation.
+WebIQ is a powerful **web scraping** and **question-answering (QA)** chatbot that follows the **Retrieval-Augmented Generation** (RAG) pipeline. It extracts and retrieves key insights from any website and generates AI-powered responses based on the extracted data. WebIQ leverages **FAISS** for efficient similarity search, **LangChain** for retrieval orchestration, and state-of-the-art **LLMs** for response generation.
 
 ## Features
-- **Automated Web Scraping**: Extracts text data from webpages and caches it locally, and can be configured to scrape a set of webpages or a fully-fledged website.
+- **Automated Web Scraping**: Extracts text data from webpages, caches it locally, and supports both targeted and full-site scraping.
 - **Vector Embeddings**: Uses FAISS to store and retrieve information efficiently.
 - **LLM Integration**: Supports OpenAI (GPT-4) and Hugging Face (Llama-2, Mistral, etc.).
-- **Chunking for Optimization**: Documents are split into manageable chunks for better retrieval.
+- **Chunking for Optimization**: Splits documents into meaningful chunks to enhance retrieval quality.
 - **Asynchronous Processing**: Uses `asyncio` for efficient execution.
-- **Caching Mechanism**: Programmed in such a way that no need to process already processed webpages again and again.
-- **Batch Processing**: Curated batches to process large numbers of URLs efficiently.
-- **Logging Memory Utilisation**: Shows the memory consumption before and after each batch.
-- **Support for Multiple Webpages**: Added support for multi-page scraping.
+- **Caching Mechanism**: Ensures previously processed webpages are not reprocessed.
+- **Batch Processing**: Processes large numbers of URLs efficiently.
+- **Memory Usage Logging**: Tracks memory consumption before and after each batch for efficiency monitoring.
+- **Multi-Page Scraping**: Seamlessly scrapes content from multiple webpages and aggregates insights.
 
 ## Installation
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/your-repo/webscrape-qa-chatbot.git
-    cd webscrape-qa-chatbot
+    git clone https://github.com/Siddharth-Chandel/WebIQ.git
+    cd WebIQ
     ```
 
 2. Create a virtual environment and activate it:
@@ -61,6 +61,12 @@ Source 1:
 file: cache/playwright-dev/pages/page_1.txt
 Content: Playwright is a Node.js library that automates browsers.
 ```
+## Practical Use Cases
+- **Research Assistance**: Quickly extract and summarize information from research papers, blogs, or documentation.
+- **Competitive Analysis**: Monitor competitors' websites and extract relevant insights for business strategy.
+- **Customer Support**: Enhance chatbot capabilities by integrating real-time website data retrieval.
+- **Market Intelligence**: Gather structured data from news sites, product pages, or financial reports for analysis.
+- **SEO Optimization**: Analyze webpage content for better keyword targeting and content strategy.
 
 ## Technologies Used
 - **RAG** (Providing better context)
@@ -73,8 +79,8 @@ Content: Playwright is a Node.js library that automates browsers.
 - **Rich** (For colorful CLI outputs)
 
 ## Future Enhancements
-- Implement a web interface using Streamlit or FastAPI.
-- Improve response accuracy with RAG optimization.
+- Develop an interactive web UI using Streamlit or FastAPI for a seamless user experience.
+- Enhance retrieval quality with advanced RAG tuning and improved embeddings.
 
 ## License
 This project is licensed under the **MIT License**.
