@@ -2,8 +2,6 @@ import os
 import sys
 import psutil
 import asyncio
-import aiohttp
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, urlunparse
 from typing import List
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode

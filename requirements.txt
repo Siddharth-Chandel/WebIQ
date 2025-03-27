@@ -1,8 +1,5 @@
 crawl4ai
 psutil
-streamlit
-requests
-beautifulsoup4
 langchain
 langchain-community
 langchain-huggingface
@@ -11,4 +8,5 @@ accelerate
 faiss-cpu
 ctransformers
 bitsandbytes
+dotenv
 rich
