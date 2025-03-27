@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO,
 
 
 async def prepare_document(url: str | list):
-    if type(url) == str:
+    if isinstance(url, str):
         folder = f"{url[8:].replace('.', '-').split('/')[0]}"
         cache_path = f"cache/{folder}/pages"
         os.makedirs(cache_path, exist_ok=True)
@@ -180,13 +180,16 @@ def chatbot(url: str | list, query: str, llm: str = "", embedding_model: str = "
 
 
 if __name__ == "__main__":
-    url = "https://playwright.dev"
-    query = "Describe playwright"
+    url = input("URL: ")
+    # Example url: "https://playwright.dev"
+    query = input("Query: ")
+    # Example query: "Describe playwright, how is it useful? What are its pros and cons ? And example usage"
     response = chatbot(url, query)
     rprint(f"\n[red]{'=='*20}* Answer *{'=='*20}[/red]\n")
     rprint(f"[cyan]{response['result']}[/cyan]")
     rprint(f"\n[red]{'=='*17}* Source Documents *{'=='*17}[/red]\n")
     for i, source in enumerate(response['source_documents']):
         rprint(f"[red]Source {i+1}[/red]:")
-        rprint(f"[yellow]file:[/yellow] [cyan]{source.metadata['source']}[/cyan]")
+        rprint(
+            f"[yellow]file:[/yellow] [cyan]{source.metadata['source']}[/cyan]")
         rprint(f"[yellow]content:[/yellow]\n{source.page_content}\n")
