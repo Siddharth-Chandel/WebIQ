@@ -6,3 +6,4 @@ venv
 t.py
 temp.py
 .env
+app.py
