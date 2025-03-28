@@ -18,9 +18,9 @@ from rich import print as rprint
 load_dotenv()
 
 HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-# "mistralai/Mistral-7B-Instruct-v0.3", "meta-llama/Llama-2-7b-chat-hf", "TheBloke/Llama-2-7B-Chat-GGML", "sentence-transformers/all-MiniLM-L6-v2""
-MODEL = os.getenv("MODEL")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
+# "mistralai/Mistral-7B-Instruct-v0.3", "meta-llama/Llama-2-7b-chat-hf", "TheBloke/Llama-2-7B-Chat-GGML", "TinyLlama/TinyLlama-1.1B-Chat-v1.0" ,"sentence-transformers/all-MiniLM-L6-v2""
+MODEL = "TheBloke/Llama-2-7B-Chat-GGML"
+EMBEDDING_MODEL = "BAAI/bge-small-en"
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
@@ -46,9 +46,13 @@ async def prepare_document(url: str | list[str]):
 
 def get_embedding_model(embedding_model_name, api_key):
     embedding_model_name = embedding_model_name or EMBEDDING_MODEL
-    if "openai" in embedding_model_name.lower() and api_key:
-        return OpenAIEmbeddings(
-            model="text-embedding-ada-002", api_key=api_key)
+    if "openai" in embedding_model_name.lower():
+        if api_key:
+            return OpenAIEmbeddings(
+                model="text-embedding-ada-002", api_key=api_key)
+        else:
+            logging.warning("Provide OpenAI API")
+            exit()
     else:
         return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
@@ -126,26 +130,34 @@ async def async_chatbot(url: str | list, query: str, llm_model: str = "", embedd
     file_path = await prepare_document(url)
     retriever = load_retriever(
         file_path, embedding_model_name=embedding_model, api_key=api_key)
+    llm_model = llm_model.split()
+    ggml = 0
 
     if not retriever:
         logging.error("Failed to load retriever. Exiting.")
         return "Error: Unable to load retriever."
 
-    if 'openai' in llm_model.lower():
+    if 'openai' in llm_model:
+        logging.info(f"LLM to be used: {llm_model[-1]}")
         llm = ChatOpenAI(model_name=os.getenv(
-            "MODEL", "gpt-4-turbo"), openai_api_key=api_key)
+            "MODEL", llm_model[-1]), openai_api_key=api_key)
     else:
-        if not (MODEL.lower().endswith("-ggml")):
+        logging.info(f"LLM to be used: {MODEL}")
+        if MODEL.lower().endswith("-ggml"):
+            ggml = 1
+            llm = CTransformers(model=MODEL,
+                                token=HUGGINGFACEHUB_API_TOKEN,
+                                model_type="llama",
+                                config={"context_length": 4096}
+                                )
+        else:
             hf_pipeline = pipeline(
                 "text-generation",
                 model=MODEL,
                 token=HUGGINGFACEHUB_API_TOKEN,
-                device_map="auto")
-
+                device_map="auto"
+            )
             llm = HuggingFacePipeline(pipeline=hf_pipeline)
-        else:
-            llm = CTransformers(model=MODEL, model_type="llama",
-                                token=HUGGINGFACEHUB_API_TOKEN)
 
     custom_prompt = PromptTemplate(
         input_variables=["context", "question"],
@@ -172,11 +184,14 @@ def chatbot(url: str | list, query: str, llm: str = "", embedding_model: str = "
 
 
 if __name__ == "__main__":
-    url = input("URL: ")
+    url = input("URL: ").split()
     # Example url: "https://playwright.dev"
     query = input("Query: ")
-    # Example query: "Describe playwright, how is it useful? What are its pros and cons ? And example usage"
-    response = chatbot(url, query)
+    if len(url)==1:
+        response = chatbot([url], query) if input("Single webpage ? [y/n] ").lower() == 'y' else chatbot(url, query)
+        # Example query: "Describe playwright, how is it useful? What are its pros and cons ? And example usage"
+    else:
+        response = chatbot(url, query)
     rprint(f"\n[red]{'=='*20}* Answer *{'=='*20}[/red]\n")
     rprint(f"[cyan]{response['result']}[/cyan]")
     rprint(f"\n[red]{'=='*17}* Source Documents *{'=='*17}[/red]\n")
