@@ -188,7 +188,7 @@ if __name__ == "__main__":
     # Example url: "https://playwright.dev"
     query = input("Query: ")
     if len(url)==1:
-        response = chatbot([url], query) if input("Single webpage ? [y/n] ").lower() == 'y' else chatbot(url, query)
+        response = chatbot(url, query) if input("Single webpage ? [y/n] ").lower() == 'y' else chatbot(url[0], query)
         # Example query: "Describe playwright, how is it useful? What are its pros and cons ? And example usage"
     else:
         response = chatbot(url, query)
