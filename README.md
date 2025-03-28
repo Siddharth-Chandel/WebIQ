@@ -36,8 +36,6 @@ WebIQ is a powerful **web scraping** and **question-answering (QA)** chatbot tha
 4. Set up environment variables by creating a `.env` file:
     ```sh
     HUGGINGFACEHUB_API_TOKEN=your_huggingface_token
-    MODEL="TheBloke/Llama-2-7B-Chat-GGML"
-    EMBEDDING_MODEL="BAAI/bge-small-en"
     OPENAI_API_KEY=your_openai_api_key  # If using OpenAI
     ```
 
