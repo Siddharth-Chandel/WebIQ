@@ -10,3 +10,10 @@ ctransformers
 bitsandbytes
 dotenv
 rich
+fastapi
+uvicorn
+langchain-openai
+sentence-transformers
+streamlit
+'uvicorn[standard]'
+hf_xet

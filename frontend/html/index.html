@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebIQ - Your AI URL Chatbot</title>
+    <link rel="stylesheet" href="../css/home.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <div id="particles-js"></div> 
+    
+    <header class="main-header">
+        <div class="logo">
+            <h1 class="gradient-text">WebIQ</h1>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="#about">About</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#testimonials">Testimonials</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="chatbot.html" class="cta-link">Demo</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="hero">
+            <div class="hero-content">
+                <h2 class="gradient-text">Unlock the Knowledge of the Web</h2>
+                <p>WebIQ is your AI assistant that provides instant answers from any URL. Just provide a link and ask your question.</p>
+                <a href="chatbot.html" class="hero-cta-btn">Try the Demo</a>
+            </div>
+            <div class="hero-image">
+                <img src="../imgs/webiq.png" alt="WebIQ Application Screenshot">
+            </div>
+        </section>
+
+        <section id="about">
+            <h3>About WebIQ</h3>
+            <div class="about-content">
+                <p>WebIQ is a cutting-edge AI-powered tool designed to streamline information retrieval from the web. By simply providing a URL, our intelligent system scrapes and analyzes the content, creating a comprehensive knowledge base from which it can answer your specific questions. Our mission is to transform how you interact with online information, making it faster, more efficient, and incredibly intuitive.</p>
+                <p>We are a team of passionate developers and AI enthusiasts dedicated to building powerful, user-friendly tools that leverage the latest in large language models and web technologies. We believe in providing clear, accurate, and context-rich answers, empowering you to make informed decisions and accelerate your research.</p>
+            </div>
+        </section>
+
+        <section id="how-it-works">
+            <h3>How It Works</h3>
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-icon"><i class="fas fa-link"></i></div>
+                    <h4>Provide URLs</h4>
+                    <p>Enter a URL or a list of URLs you want to get answers from.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-icon"><i class="fas fa-database"></i></div>
+                    <h4>Scrape the Web</h4>
+                    <p>Our backend will scrape the pages and create a knowledge base.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-icon"><i class="fas fa-comment-dots"></i></div>
+                    <h4>Ask Questions</h4>
+                    <p>Ask any question and get a detailed answer based on the content.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="testimonials">
+            <h3>What Our Users Say</h3>
+            <div class="testimonial-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"WebIQ is a game-changer for my research. The ability to get instant answers from multiple sources is incredible."</div>
+                    <div class="testimonial-author">- Alex M.</div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"The interface is so clean and easy to use. I love the simple toggle for scraping a whole site."</div>
+                    <div class="testimonial-author">- Jessica L.</div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-text">"I was skeptical, but the ac-curacy of the answers is mind-blowing. It's now my go-to tool for work."</div>
+                    <div class="testimonial-author">- Sam P.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="privacy">
+            <h3>Privacy and Concerns</h3>
+            <div class="privacy-content">
+                <p>We take your privacy seriously. WebIQ only scrapes the content you explicitly provide a URL for. We do not track your browsing history or collect any personal data beyond what is necessary to operate the service. All data is processed securely and is not shared with any third parties.</p>
+                <p>The scraped data is stored temporarily to answer your questions and is deleted after a set period. We are committed to transparency and are continuously improving our practices to ensure your data remains safe and secure.</p>
+            </div>
+        </section>
+
+        <section id="contact">
+            <h3>Contact Us</h3>
+            <form class="contact-form">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="message">Message</label>
+                    <textarea id="message" name="message" rows="5" required></textarea>
+                </div>
+                <button type="submit" class="send-button">Send Message</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <div class="social-links">
+            <a href="https://www.linkedin.com/in/siddharth-chandel-001097245/" target="_blank" aria-label="LinkedIn profile">
+                <i class="fab fa-linkedin"></i>
+            </a>
+        </div>
+        <p>&copy; 2024 WebIQ</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="../js/home-script.js"></script>
+</body>
+</html>

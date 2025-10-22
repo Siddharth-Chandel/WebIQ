@@ -112,7 +112,7 @@ async def crawl_parallel(urls: List[str] | str, file_path: str, max_concurrent: 
                         print(f"Error crawling {url}: {result}")
                         fail_count += 1
                     elif result.success:
-                        content = f"{result.markdown_v2.fit_markdown}"
+                        content = f"{result.markdown.fit_markdown}"
                         text.add(content)
                         if wasStr:
                             not_visit = await get_internal_urls(not_visit, visited, result)

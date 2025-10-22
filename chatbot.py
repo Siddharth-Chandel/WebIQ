@@ -1,4 +1,8 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
+import time
 import asyncio
 import logging
 from langchain_community.document_loaders import TextLoader
@@ -8,14 +12,12 @@ from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain_huggingface import HuggingFacePipeline
 from worker import scrape_website
-from dotenv import load_dotenv
 from transformers import pipeline
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.llms import CTransformers
 from langchain.prompts import PromptTemplate
 from rich import print as rprint
 
-load_dotenv()
 
 HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 # "mistralai/Mistral-7B-Instruct-v0.3", "meta-llama/Llama-2-7b-chat-hf", "TheBloke/Llama-2-7B-Chat-GGML", "TinyLlama/TinyLlama-1.1B-Chat-v1.0" ,"sentence-transformers/all-MiniLM-L6-v2""
@@ -96,7 +98,7 @@ def process_documents(file_path: str, embedding_model, chunk_size: int = 500, ch
         logging.error(f"Error in document processing: {e}")
 
 
-def load_retriever(file_path: str, embedding_model_name: str = "", api_key: str = ""):
+async def load_retriever(file_path: str, embedding_model_name: str = "", api_key: str = ""):
     try:
         cache_path = os.path.dirname(file_path)
 
@@ -126,9 +128,9 @@ def load_retriever(file_path: str, embedding_model_name: str = "", api_key: str 
         return None
 
 
-async def async_chatbot(url: str | list, query: str, llm_model: str = "", embedding_model: str = "", api_key: str = ""):
+async def custom_pipeline(url: str | list, llm_model: str = "", embedding_model: str = "", api_key: str = ""):
     file_path = await prepare_document(url)
-    retriever = load_retriever(
+    retriever = await load_retriever(
         file_path, embedding_model_name=embedding_model, api_key=api_key)
     llm_model = llm_model.split()
     ggml = 0
@@ -142,27 +144,68 @@ async def async_chatbot(url: str | list, query: str, llm_model: str = "", embedd
         llm = ChatOpenAI(model_name=os.getenv(
             "MODEL", llm_model[-1]), openai_api_key=api_key)
     else:
-        logging.info(f"LLM to be used: {MODEL}")
-        if MODEL.lower().endswith("-ggml"):
-            ggml = 1
-            llm = CTransformers(model=MODEL,
-                                token=HUGGINGFACEHUB_API_TOKEN,
-                                model_type="llama",
-                                config={"context_length": 4096}
-                                )
-        else:
-            hf_pipeline = pipeline(
-                "text-generation",
-                model=MODEL,
-                token=HUGGINGFACEHUB_API_TOKEN,
-                device_map="auto"
-            )
-            llm = HuggingFacePipeline(pipeline=hf_pipeline)
+        try:
+            logging.info(f"LLM to be used: {MODEL}")
+            if MODEL.lower().endswith("-ggml"):
+                ggml = 1
+                llm = CTransformers(model=MODEL,
+                                    token=HUGGINGFACEHUB_API_TOKEN,
+                                    model_type="llama",
+                                    config={"context_length": 4096}
+                                    )
+            else:
+                hf_pipeline = pipeline(
+                    "text-generation",
+                    model=MODEL,
+                    token=HUGGINGFACEHUB_API_TOKEN,
+                    device_map="auto"
+                )
+                llm = HuggingFacePipeline(pipeline=hf_pipeline)
+        except Exception as e:
+            logging.error(f"Failed to load LLM model '{MODEL}'. Error: {e}", exc_info=True)
+            # Raise an exception so the FastAPI endpoint can catch it and send an error message to the client.
+            raise RuntimeError(f"Failed to load LLM model: {e}")
 
     custom_prompt = PromptTemplate(
         input_variables=["context", "question"],
         template="You are an AI assistant. Answer the question based on the given context.\n\nContext: {context}\n\nQuestion: {question}\nAnswer:"
     )
+
+    return llm, retriever, custom_prompt
+
+class Chatbot:
+    def __init__(self,url: str | list, llm_model: str = "", embedding_model: str = "", api_key: str = ""):
+        self.url = url
+        self.llm_model = llm_model
+        if 'ggml' not in llm_model:
+            self.change = 1
+        else:
+            self.change = 0
+
+        self.embedding_model = embedding_model
+        self.api_key = api_key
+    
+    async def model_loaded(self):
+        self.llm, self.retriever, self.custom_prompt = await custom_pipeline(self.url, self.llm_model, self.embedding_model, self.api_key)
+
+    async def get_response(self, query:str):
+        qa_chain = RetrievalQA.from_chain_type(
+            llm=self.llm,
+            retriever=self.retriever,
+            return_source_documents=True,
+            chain_type="stuff",
+            chain_type_kwargs={"prompt": self.custom_prompt}
+        )
+        response = await asyncio.to_thread(qa_chain.invoke, query)
+        
+        # if self.change==1:
+        #     return response['result'].split("Answer:")[1]
+        
+        return response['result']
+
+
+async def chatbot(url: str | list, query: str, llm_model: str = "", embedding_model: str = "", api_key: str = ""):
+    llm, retriever, custom_prompt = await custom_pipeline(url, llm_model, embedding_model, api_key)
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         retriever=retriever,
@@ -170,33 +213,41 @@ async def async_chatbot(url: str | list, query: str, llm_model: str = "", embedd
         chain_type="stuff",
         chain_type_kwargs={"prompt": custom_prompt}
     )
-    response = qa_chain.invoke(query)
+    response = await asyncio.to_thread(qa_chain.invoke, query)
     return response
 
 
-def chatbot(url: str | list, query: str, llm: str = "", embedding_model: str = "", api_key: str = ""):
-    try:
-        return asyncio.run(async_chatbot(url, query, llm, embedding_model, api_key))
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop.run_until_complete(async_chatbot(url, query, llm, embedding_model, api_key))
+async def main():
+    """
+    Main asynchronous function to run the chatbot.
+    """
 
+    url_input = input("Enter URL(s) separated by space: ")
+    urls = url_input.split()
+    query = input("Enter your query: ")
+    
+    if not urls or not query:
+        rprint("[red]Please provide at least one URL and a query.[/red]")
+        return
+
+    rprint("\n[blue]...Loading models and processing documents...[/blue]")
+    try:
+        response = await chatbot(
+            url=urls, 
+            query=query
+        )
+    
+        rprint(f"\n[red]{'=='*20}* Answer *{'=='*20}[/red]\n")
+        rprint(f"[cyan]{response['result']}[/cyan]")
+        rprint(f"\n[red]{'=='*17}* Source Documents *{'=='*17}[/red]\n")
+        
+        for i, source in enumerate(response['source_documents']):
+            rprint(f"[red]Source {i+1}[/red]:")
+            rprint(f"[yellow]file:[/yellow] [cyan]{source.metadata['source']}[/cyan]")
+            rprint(f"[yellow]content:[/yellow]\n{source.page_content}\n")
+
+    except Exception as e:
+        rprint(f"[red]An error occurred: {e}[/red]")
 
 if __name__ == "__main__":
-    url = input("URL: ").split()
-    # Example url: "https://playwright.dev"
-    query = input("Query: ")
-    if len(url)==1:
-        response = chatbot(url, query) if input("Single webpage ? [y/n] ").lower() == 'y' else chatbot(url[0], query)
-        # Example query: "Describe playwright, how is it useful? What are its pros and cons ? And example usage"
-    else:
-        response = chatbot(url, query)
-    rprint(f"\n[red]{'=='*20}* Answer *{'=='*20}[/red]\n")
-    rprint(f"[cyan]{response['result']}[/cyan]")
-    rprint(f"\n[red]{'=='*17}* Source Documents *{'=='*17}[/red]\n")
-    for i, source in enumerate(response['source_documents']):
-        rprint(f"[red]Source {i+1}[/red]:")
-        rprint(
-            f"[yellow]file:[/yellow] [cyan]{source.metadata['source']}[/cyan]")
-        rprint(f"[yellow]content:[/yellow]\n{source.page_content}\n")
+    asyncio.run(main())
