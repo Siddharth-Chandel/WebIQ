@@ -15,5 +15,6 @@ uvicorn
 langchain-openai
 sentence-transformers
 streamlit
-'uvicorn[standard]'
+uvicorn[standard]
 hf_xet
+langchain-text-splitters

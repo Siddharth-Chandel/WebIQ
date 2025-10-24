@@ -1,175 +1,200 @@
 document.addEventListener('DOMContentLoaded', () => {
     const chatWindow = document.querySelector('.chat-window');
     const urlInput = document.getElementById('urlInput');
-    const fullWebsiteToggle = document.getElementById('fullWebsiteToggle');
-    const scrapeBtn = document.getElementById('scrapeBtn');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
-    
-    // Global variable to hold the WebSocket connection
-    let ws;
+    const scrapeBtn = document.querySelector('.scrape-button');
+    const resetBtn = document.querySelector('.reset-button');
 
-    // Function to add a message to the chat window
-    function addMessage(message, isUser = true) {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('message');
-        messageElement.classList.add(isUser ? 'user-message' : 'bot-message');
-        messageElement.innerHTML = `<p>${message}</p>`;
-        chatWindow.appendChild(messageElement);
+    let ws = null;
+    let sessionId = localStorage.getItem('chatbot_session') || null;
+
+    function addMessage(msg, isUser = true) {
+        const el = document.createElement('div');
+        el.classList.add('message', isUser ? 'user-message' : 'bot-message');
+        el.textContent = msg;
+        chatWindow.appendChild(el);
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    // Function to add a loading indicator
-    let loadingIndicator = null;
-    function showLoadingIndicator() {
-        if (!loadingIndicator) {
-            loadingIndicator = document.createElement('div');
-            loadingIndicator.classList.add('message', 'bot-message', 'loading');
-            loadingIndicator.innerHTML = '<p>...</p>';
-            chatWindow.appendChild(loadingIndicator);
+    function showLoading() {
+        if (!document.querySelector('.loading')) {
+            const loading = document.createElement('div');
+            loading.classList.add('message', 'bot-message', 'loading');
+            loading.textContent = '...';
+            chatWindow.appendChild(loading);
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
     }
 
-    function hideLoadingIndicator() {
-        if (loadingIndicator) {
-            loadingIndicator.remove();
-            loadingIndicator = null;
+    function hideLoading() {
+        const loading = document.querySelector('.loading');
+        if (loading) loading.remove();
+    }
+
+    async function waitForChatbotReady(sessionId) {
+        addMessage("Waiting for chatbot to finish initialization...", false);
+        showLoading();
+
+        while (true) {
+            try {
+                const statusRes = await fetch(`http://127.0.0.1:8000/session_status/${sessionId}`);
+                const statusData = await statusRes.json();
+
+                if (statusData.status === "ready") break;
+                else console.log("⏳ Initializing...");
+            } catch (err) {
+                console.error("Error checking session status:", err);
+            }
+
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        hideLoading();
+        addMessage("Chatbot is ready! You can start asking questions.", false);
+    }
+
+    function initWebSocket(sessionId) {
+        ws = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${sessionId}`);
+
+        ws.onopen = () => {
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+            userInput.focus();
+        };
+
+        ws.onmessage = (event) => {
+            hideLoading();
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.text) addMessage(msg.text, false);
+                if (msg.error) addMessage(`Error: ${msg.error}`, false);
+            } catch (err) {
+                console.error("Invalid JSON from server:", err);
+            }
+        };
+
+        ws.onclose = () => {
+            hideLoading();
+            addMessage("WebSocket disconnected. Use Reset to start over.", false);
+            userInput.disabled = true;
+            sendBtn.disabled = true;
+        };
+
+        ws.onerror = (err) => {
+            hideLoading();
+            console.error(err);
+            addMessage("WebSocket error. Check console.", false);
+        };
+    }
+
+    async function startScrape() {
+        const urls = urlInput.value.split(',').map(u => u.trim()).filter(Boolean);
+        if (!urls.length) return addMessage("Enter at least one URL", false);
+
+        scrapeBtn.disabled = true;
+        urlInput.disabled = true;
+
+        try {
+            if (!sessionId) {
+                const sessionRes = await fetch("http://127.0.0.1:8000/create_session");
+                const sessionData = await sessionRes.json();
+                sessionId = sessionData.session;
+                localStorage.setItem('chatbot_session', sessionId);
+            }
+
+            await fetch("http://127.0.0.1:8000/scrape/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ session_id: sessionId, urls })
+            });
+
+            await waitForChatbotReady(sessionId);
+            initWebSocket(sessionId);
+        } catch (err) {
+            hideLoading();
+            addMessage(`Failed to initialize chatbot: ${err.message}`, false);
+            scrapeBtn.disabled = false;
+            urlInput.disabled = false;
         }
     }
 
-    // Function to handle scraping and sending URLs to the backend
-    scrapeBtn.addEventListener('click', async () => {
-        const urlValue = urlInput.value.trim();
-        if (!urlValue) {
-            addMessage("Please enter at least one URL to scrape.", false);
-            return;
-        }
-
-        const scrapeFullWebsite = fullWebsiteToggle.checked;
-        
-        let urls;
-        if (scrapeFullWebsite) {
-            urls = urlValue.split(',').map(url => url.trim()).filter(url => url);
-            if (urls.length > 1) {
-                addMessage("To scrape a full website, please provide only one URL.", false);
-                return;
-            }
-        } else {
-            urls = urlValue.split(',').map(url => url.trim()).filter(url => url);
-        }
-
-        // Disable input while communicating with the backend
-        urlInput.disabled = true;
-        scrapeBtn.disabled = true;
-        fullWebsiteToggle.disabled = true;
-        addMessage("Requesting chatbot initialization...", false);
-        showLoadingIndicator();
-
-        try {
-            // Step 1: Send a fetch request to start the background task on the server
-            const response = await fetch("http://127.0.0.1:8000/scrape/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    urls: urls,
-                    llm_model: "default",
-                    embedding_model: "default",
-                    api_key: "default"
-                })
-            });
-
-            const data = await response.json();
-            hideLoadingIndicator();
-            addMessage(data.message, false);
-            const sessionId = data.session_id;
-            console.log("Session ID:", sessionId);
-
-            if (response.ok) {
-                // Step 2: If the initial request was successful, open the WebSocket connection
-                addMessage("Opening WebSocket for real-time communication...", false);
-                showLoadingIndicator();
-                
-                ws = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${sessionId}`);
-
-                ws.onopen = () => {
-                    hideLoadingIndicator();
-                    addMessage("WebSocket connected. You can now ask questions!", false);
-                    userInput.disabled = false;
-                    sendBtn.disabled = false;
-                    userInput.focus();
-                };
-
-                ws.onmessage = (event) => {
-                    hideLoadingIndicator();
-                    const data = JSON.parse(event.data);
-                    if (data.error) {
-                        addMessage(`Error: ${data.error}`, false);
-                    } else if (data.text) {
-                        addMessage(data.text, false);
-                    }
-                };
-
-                ws.onclose = (event) => {
-                    hideLoadingIndicator();
-                    addMessage("Connection closed. Please refresh to start a new session.", false);
-                    console.log(`WebSocket connection closed. Code: ${event.code}, Reason: ${event.reason}`);
-                    userInput.disabled = true;
-                    sendBtn.disabled = true;
-                };
-
-                ws.onerror = (error) => {
-                    hideLoadingIndicator();
-                    addMessage("WebSocket error occurred. See console for details.", false);
-                    console.error("WebSocket Error:", error);
-                };
-            } else {
-                // Re-enable inputs on fetch error
-                urlInput.disabled = false;
-                scrapeBtn.disabled = false;
-                fullWebsiteToggle.disabled = false;
-            }
-        } catch (error) {
-            hideLoadingIndicator();
-            addMessage(`Failed to connect to the server. Error: ${error.message}`, false);
-            console.error("Fetch Error:", error);
-            // Re-enable inputs on fetch error
-            urlInput.disabled = false;
-            scrapeBtn.disabled = false;
-            fullWebsiteToggle.disabled = false;
-        }
+    scrapeBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await startScrape();
     });
 
-    // Function to handle user questions
     sendBtn.addEventListener('click', () => {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            addMessage("Not connected to the chatbot. Please scrape URLs first.", false);
-            return;
-        }
-
         const question = userInput.value.trim();
-        if (!question) return;
-
+        if (!question || !ws || ws.readyState !== WebSocket.OPEN) return;
         addMessage(question);
         userInput.value = '';
-        showLoadingIndicator();
-
-        // Send the new query over the existing WebSocket connection
-        ws.send(JSON.stringify({
-            query: question,
-        }));
+        ws.send(JSON.stringify({ query: question }));
+        showLoading();
     });
 
-    // Enable sending messages with the Enter key
     userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendBtn.click();
-        }
+        if (e.key === 'Enter') sendBtn.click();
     });
 
-    // Initially disable the user question input until URLs are scraped
-    userInput.disabled = true;
-    sendBtn.disabled = true;
+    resetBtn.addEventListener('click', () => {
+        if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+        ws = null;
+        chatWindow.innerHTML = `
+            <div class="message bot-message">
+                <p>Hello! I can answer questions using information from any URL. Please provide a URL below.</p>
+            </div>`;
+        urlInput.disabled = false;
+        urlInput.value = '';
+        scrapeBtn.disabled = false;
+        userInput.value = '';
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+        sessionId = null;
+        localStorage.removeItem('chatbot_session');
+    });
+
+    if (sessionId) {
+        addMessage("🔄 Restoring previous chatbot session...", false);
+        waitForChatbotReady(sessionId).then(() => initWebSocket(sessionId));
+    }
+});
+
+// Particles effect
+const canvas = document.getElementById('bgParticles');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let particles = [];
+for (let i=0; i<120; i++){
+    particles.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        r: Math.random()*2+1,
+        dx: Math.random()*0.5-0.25,
+        dy: Math.random()*0.5-0.25
+    });
+}
+
+function animateParticles(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for (let p of particles){
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle = 'rgba(37,117,252,0.5)';
+        ctx.fill();
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x<0||p.x>canvas.width) p.dx*=-1;
+        if (p.y<0||p.y>canvas.height) p.dy*=-1;
+    }
+    requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// Resize canvas on window resize
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 });

@@ -1,4 +1,7 @@
 # main.py
+from dotenv import load_dotenv
+load_dotenv()
+
 import sys
 import uuid
 import asyncio
@@ -39,7 +42,7 @@ app.add_middleware(
 # -----------------------------
 # Session storage
 # -----------------------------
-chatbot_sessions = {}
+chatbot_sessions = {}  # {session_id: Chatbot instance or None if failed}
 
 # -----------------------------
 # Root endpoint
@@ -48,12 +51,46 @@ chatbot_sessions = {}
 def read_root():
     return {"message": "Welcome to the Session-Based RAG Chatbot API!", "status": "Ready"}
 
+@app.get("/create_session")
+def create_session():
+    return {"session":str(uuid.uuid4())}
+
+
+@app.get("/session_status/{session_id}")
+def session_status(session_id: str):
+    """
+    Returns the current status of a chatbot session.
+    Status can be:
+      - initializing (session exists but chatbot not ready)
+      - ready (chatbot instance ready)
+      - failed (chatbot initialization failed)
+    """
+    if session_id not in chatbot_sessions:
+        return {"status": "not_found"}
+    
+    chatbot = chatbot_sessions[session_id]
+    if chatbot is None:
+        return {"status": "initializing"}
+    elif chatbot == "err":
+        chatbot = None
+        return {"status": "failed"}
+    
+    return {"status": "ready"}
+
+
+
+# -----------------------------
+# Helper: Run async init in background
+# -----------------------------
+def run_chatbot_init(session_id, urls, llm_model, embedding_model, api_key):
+    asyncio.create_task(initialize_chatbot(session_id, urls, llm_model, embedding_model, api_key))
+
 # -----------------------------
 # Scrape & initialize chatbot
 # -----------------------------
 @app.post("/scrape/")
 async def scrape_and_load(response: dict, background_tasks: BackgroundTasks):
-    session_id = response.get("session_id") or str(uuid.uuid4())
+    session_id = response.get("session_id")
     urls = response.get("urls")
     llm_model = response.get("llm_model", "TheBloke/Llama-2-7B-Chat-GGML")
     embedding_model = response.get("embedding_model", "BAAI/bge-small-en")
@@ -65,9 +102,20 @@ async def scrape_and_load(response: dict, background_tasks: BackgroundTasks):
     if session_id in chatbot_sessions:
         return {"message": f"Chatbot for session {session_id} already initialized.", "session_id": session_id}
 
-    # Background task
-    background_tasks.add_task(initialize_chatbot, session_id, urls, llm_model, embedding_model, api_key)
-    logging.info(f"[{session_id}] Chatbot initialization started.")
+    # Mark session as initializing
+    chatbot_sessions[session_id] = None
+
+    # Use a **blocking wrapper** to run async in thread safely
+    async def init_wrapper():
+        try:
+            await initialize_chatbot(session_id, urls, llm_model, embedding_model, api_key)
+        except Exception as e:
+            logging.error(f"[{session_id}] Initialization error: {e}", exc_info=True)
+            chatbot_sessions[session_id] = None
+
+    background_tasks.add_task(init_wrapper)
+
+    logging.info(f"[{session_id}] Chatbot initialization scheduled in background.")
     return {"message": "Chatbot initialization started.", "session_id": session_id}
 
 # -----------------------------
@@ -76,14 +124,14 @@ async def scrape_and_load(response: dict, background_tasks: BackgroundTasks):
 async def initialize_chatbot(session_id, urls, llm_model, embedding_model, api_key):
     try:
         logging.info(f"[{session_id}] Initializing chatbot...")
-        chatbot = await asyncio.to_thread(
-            Chatbot,
+        chatbot = Chatbot(
             url=urls,
             llm_model=llm_model,
             embedding_model=embedding_model,
             api_key=api_key
         )
-        await chatbot.model_loaded()
+        await chatbot.initialize()
+
         chatbot_sessions[session_id] = chatbot
         logging.info(f"[{session_id}] Chatbot ready.")
     except NotImplementedError as e:
@@ -91,7 +139,7 @@ async def initialize_chatbot(session_id, urls, llm_model, embedding_model, api_k
         chatbot_sessions[session_id] = None
     except Exception as e:
         logging.error(f"[{session_id}] Initialization failed: {e}", exc_info=True)
-        chatbot_sessions[session_id] = None
+        chatbot_sessions[session_id] = "err"
 
 # -----------------------------
 # WebSocket endpoint
@@ -102,16 +150,19 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     logging.info(f"[{session_id}] WebSocket connected.")
 
     try:
-        if session_id not in chatbot_sessions or chatbot_sessions[session_id] is None:
+        # Wait until chatbot is ready
+        while session_id not in chatbot_sessions or chatbot_sessions[session_id] is None:
+            await websocket.send_json({"text": "Initializing chatbot, please wait..."})
+            await asyncio.sleep(1)
+
+        chatbot_instance = chatbot_sessions[session_id]
+        if chatbot_instance is None:
             await websocket.send_json({
-                "text": "Chatbot initialization failed or not ready. " +
-                        "Likely due to Windows async Playwright issue. " +
-                        "Try using WSL, Docker, or a Linux environment."
+                "text": "Chatbot initialization failed. Likely due to Playwright async issue on Windows."
             })
             return
 
-        await websocket.send_json({"text": f"Chatbot session {session_id} is ready. You can start chatting."})
-        chatbot_instance = chatbot_sessions[session_id]
+        await websocket.send_json({"text": f"Chatbot session {session_id} is ready! You can start chatting."})
 
         while True:
             data = await websocket.receive_json()
@@ -119,7 +170,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             if not query:
                 continue
 
-            response_text = await chatbot_instance.get_response(query)
+            response_text = await chatbot_instance.query(query)
             await websocket.send_json({"text": response_text})
 
     except WebSocketDisconnect:
