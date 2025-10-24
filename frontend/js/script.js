@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         while (true) {
             try {
-                const statusRes = await fetch(`http://127.0.0.1:8000/session_status/${sessionId}`);
+                const statusRes = await fetch(`https://schandel08-webiq-backend.hf.space/${sessionId}`);
                 const statusData = await statusRes.json();
 
                 if (statusData.status === "ready") break;
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initWebSocket(sessionId) {
-        ws = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${sessionId}`);
+        ws = new WebSocket(`wss://schandel08-webiq-backend.hf.space/ws/chat/${sessionId}`);
 
         ws.onopen = () => {
             userInput.disabled = false;
@@ -97,13 +97,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (!sessionId) {
-                const sessionRes = await fetch("http://127.0.0.1:8000/create_session");
+                const sessionRes = await fetch("https://schandel08-webiq-backend.hf.space/create_session");
                 const sessionData = await sessionRes.json();
                 sessionId = sessionData.session;
                 localStorage.setItem('chatbot_session', sessionId);
             }
 
-            await fetch("http://127.0.0.1:8000/scrape/", {
+            await fetch("https://schandel08-webiq-backend.hf.space/scrape/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ session_id: sessionId, urls })
