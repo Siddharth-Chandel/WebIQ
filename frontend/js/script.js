@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         while (true) {
             try {
-                const statusRes = await fetch(`https://schandel08-webiq-backend.hf.space/${sessionId}`);
+                const statusRes = await fetch(`https://schandel08-webiq-backend.hf.space/session_status/${sessionId}`);
                 const statusData = await statusRes.json();
 
                 if (statusData.status === "ready") break;
