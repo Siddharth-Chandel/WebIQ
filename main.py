@@ -29,7 +29,7 @@ origins = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "http://127.0.0.1:5500",
-    "https://vaishnavibasukar20.github.io/WebIQ-Frontend/"
+    "https://vaishnavibasukar20.github.io/WebIQ-Frontend"
 ]
 
 app.add_middleware(
