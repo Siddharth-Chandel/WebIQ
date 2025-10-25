@@ -86,10 +86,7 @@ Content: Playwright is a Node.js library that automates browsers.
 This project is licensed under the **MIT License**.
 
 ## Author
-- Siddharth Chandel - Developed as part of NLP & AI research.
-Let's connect on [LinkedIn](https://www.linkedin.com/in/siddharth-chandel-001097245/) !!!
-- Vaishnavi Basutkar - Developed as part of application of LLM.
-See you on [LinkedIn](https://www.linkedin.com/in/vaishnavi-basutkar-24699a2a7/) !!!
+Siddharth Chandel - Developed as part of NLP & AI research. Let's connect on [LinkedIn](https://www.linkedin.com/in/siddharth-chandel-001097245/) !!!
 
 ---
 _Contributions are welcome! Feel free to fork and enhance._ 🚀
