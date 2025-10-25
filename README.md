@@ -31,6 +31,8 @@ WebIQ is a powerful **web scraping** and **question-answering (QA)** chatbot tha
 3. Install the required dependencies:
     ```sh
     pip install -r requirements.txt
+
+    playwright install
     ```
 
 4. Set up environment variables by creating a `.env` file:
