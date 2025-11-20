@@ -175,8 +175,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             await websocket.send_json({"text": response_text})
 
     except WebSocketDisconnect:
+        del chatbot_sessions[session_id]
         logging.info(f"[{session_id}] WebSocket disconnected.")
     except Exception as e:
+        del chatbot_sessions[session_id]
         logging.error(f"[{session_id}] WebSocket error: {e}", exc_info=True)
         try:
             await websocket.send_json({"text": "An unexpected server error occurred."})

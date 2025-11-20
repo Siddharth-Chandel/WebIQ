@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let ws = null;
     let sessionId = localStorage.getItem('chatbot_session') || null;
+    let base_url = "http://127.0.0.1:8000";
+    let base_url_prod = "https://schandel08-webiq-backend.hf.space";
+    let base_url_ws = "ws://127.0.0.1:8000";
+    let base_url_prod_ws = "wss://schandel08-webiq-backend.hf.space";
 
     function addMessage(msg, isUser = true) {
         const el = document.createElement('div');
@@ -38,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         while (true) {
             try {
-                const statusRes = await fetch(`https://schandel08-webiq-backend.hf.space/session_status/${sessionId}`);
+                const statusRes = await fetch(`${base_url}/session_status/${sessionId}`);
                 const statusData = await statusRes.json();
 
                 if (statusData.status === "ready") break;
@@ -55,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initWebSocket(sessionId) {
-        ws = new WebSocket(`wss://schandel08-webiq-backend.hf.space/ws/chat/${sessionId}`);
+        ws = new WebSocket(`${base_url_ws}/ws/chat/${sessionId}`);
 
         ws.onopen = () => {
             userInput.disabled = false;
@@ -97,13 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (!sessionId) {
-                const sessionRes = await fetch("https://schandel08-webiq-backend.hf.space/create_session");
+                const sessionRes = await fetch(`${base_url}/create_session`);
                 const sessionData = await sessionRes.json();
                 sessionId = sessionData.session;
                 localStorage.setItem('chatbot_session', sessionId);
             }
 
-            await fetch("https://schandel08-webiq-backend.hf.space/scrape/", {
+            await fetch(`${base_url}/scrape/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ session_id: sessionId, urls })
